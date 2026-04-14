@@ -9,11 +9,13 @@ interface Props {
   onEnter: (avatarConfig: AvatarConfig, status: UserStatus) => void;
   roomCount: number;
 }
+const HERMES_URL = process.env.NEXT_PUBLIC_HERMES_URL || 'http://localhost:3101';
 
 export default function EntryScreen({ onEnter, roomCount }: Props) {
   const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<UserStatus>(EMPTY_STATUS);
   const [ready, setReady] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   // Defer all localStorage reads to client — prevents SSR hydration mismatch
   useEffect(() => {
@@ -22,6 +24,10 @@ export default function EntryScreen({ onEnter, roomCount }: Props) {
     const savedStatus = getSavedStatus();
     if (savedStatus) setStatus(savedStatus);
     setReady(true);
+    fetch(`${HERMES_URL}/suggest`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => { if (d.suggestions) setSuggestions(d.suggestions); })
+    .catch(() => {});
   }, []);
 
   function handleEnter() {
@@ -51,6 +57,31 @@ export default function EntryScreen({ onEnter, roomCount }: Props) {
         {/* Status */}
         <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 mb-4 space-y-2">
           <p className="text-xs text-neutral-500 uppercase tracking-widest font-medium mb-3">Status (optional)</p>
+          {suggestions.length > 0 && (
+            <div className="flex flex-col gap-1.5 mb-3">
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    const parts = s.split(' · ');
+                    setStatus({ music: parts[0] || '', doing: parts[1] || '', having: parts[2] || '' });
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '0.5px solid rgba(255,255,255,0.10)',
+                    borderRadius: 8,
+                    padding: '7px 12px',
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,0.45)',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           {[
             { key: 'music' as const, placeholder: 'what are you listening to?' },
             { key: 'doing' as const, placeholder: 'what are you up to?' },
