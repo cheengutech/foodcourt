@@ -109,15 +109,21 @@ async function handleIntent(text: string, chatId: string) {
     const result = await runCommand(cmd);
     return sendMessage(chatId, result);
   }
-  if (lower.startsWith('ship:') || lower.startsWith('make:')) {    
-    const task = text.replace(/^(ship|make|task):\s*/i, '').trim();
-    const res = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
+  if (lower.startsWith('ship:') || lower.startsWith('make:')) {
+    const task = text.replace(/^(ship|make):\s*/i, '').trim();
+    const createRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: task, assigneeSlug: 'cto-2' }),
-        });
-    if (res.ok) return sendMessage(chatId, `Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
-    return sendMessage(chatId, `Could not create issue (${res.status}). Try again.`);
+      body: JSON.stringify({ title: task }),
+    });
+    if (!createRes.ok) return sendMessage(chatId, `Could not create issue (${createRes.status}).`);
+    const issue = await createRes.json() as { id: string };
+    await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assigneeSlug: 'cto-2' }),
+    });
+    return sendMessage(chatId, `Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
   }
 
   const reply = await ollamaChat(`You are Hermes, operator assistant for a digital food court. The operator asks: "${text}". Reply helpfully and briefly.`);
