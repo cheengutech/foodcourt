@@ -48,7 +48,7 @@ export async function gitDiff(): Promise<string> {
 }
 
 export async function listFiles(dir: string = ''): Promise<string> {
-  return runCommand(`find ${path.join(REPO, dir)} -type f -name "*.ts" -o -name "*.tsx" -o -name "*.css" | grep -v node_modules | grep -v .next`);
+    return runCommand(`find ${REPO} -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \\) | grep -v node_modules | grep -v .next | grep -v dist | grep -v .claude`);
 }
 
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';

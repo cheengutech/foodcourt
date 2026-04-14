@@ -85,7 +85,7 @@ async function gitDiff() {
     return runCommand('git diff HEAD~1 --stat');
 }
 async function listFiles(dir = '') {
-    return runCommand(`find ${path.join(REPO, dir)} -type f -name "*.ts" -o -name "*.tsx" -o -name "*.css" | grep -v node_modules | grep -v .next`);
+    return runCommand(`find ${REPO} -type f \\( -name "*.ts" -o -name "*.tsx" -o -name "*.css" \\) | grep -v node_modules | grep -v .next | grep -v dist | grep -v .claude`);
 }
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen3.5:9b';

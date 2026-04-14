@@ -32,6 +32,8 @@ export default function StatusBubble({ status, isAway }: Props) {
         letterSpacing: '0.01em',
         lineHeight: 1.4,
         transition: 'opacity 0.3s',
+        wordBreak: 'break-all',
+        wordWrap: 'break-word',
       }}
     >
       {text}
