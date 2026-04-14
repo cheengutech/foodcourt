@@ -14,12 +14,34 @@ interface Props {
   onLeave: () => void;
 }
 
+async function moderateStatus(text: string): Promise<boolean> {
+  if (!text?.trim()) return true;
+  const hermesUrl = process.env.NEXT_PUBLIC_HERMES_URL || 'http://localhost:3101';
+  try {
+    const res = await fetch(`${hermesUrl}/moderate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: text }),
+    });
+    const data = await res.json();
+    return data.ok !== false;
+  } catch {
+    return true; // Gracefully allow if moderation service is unavailable
+  }
+}
+
 export default function StatusBar({
   status, avatarConfig, isAway, onStatusChange, onAwayToggle, onLeave,
 }: Props) {
   const [local, setLocal] = useState<UserStatus>(status);
 
-  function handleBlur(field: keyof UserStatus, value: string) {
+  async function handleBlur(field: keyof UserStatus, value: string) {
+    const approved = await moderateStatus(value);
+    if (!approved) {
+      // Silently reject — don't show harsh error, just revert
+      setLocal(p => ({ ...p, [field]: p[field] }));
+      return;
+    }
     const next = { ...local, [field]: value };
     setLocal(next);
     onStatusChange(next);
