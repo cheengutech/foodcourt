@@ -35,8 +35,7 @@ export default function EntryScreen({ onEnter, roomCount }: Props) {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#0f0b08' }}>
-      <div className="w-full max-w-sm">
+<div className="w-full py-8 flex flex-col items-center" style={{ background: '#0f0b08' }}>      <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-medium text-neutral-100 mb-1">Food Court</h1>
