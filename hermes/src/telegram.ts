@@ -41,8 +41,8 @@ async function handleIntent(text: string, chatId: string) {
       body: JSON.stringify({ title: task }),
     });
     if (!createRes.ok) return sendMessage(chatId, `Could not create issue (${createRes.status}).`);
-    const issue = await createRes.json() as { id: string };
-    await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`, {
+    const issue = await createRes.json() as { id: string; identifier: string };
+    await fetch(`${PAPERCLIP_URL}/api/issues/${issue.identifier}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ assigneeId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
@@ -51,8 +51,7 @@ async function handleIntent(text: string, chatId: string) {
     for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 30000));
       try {
-        const checkRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`);
-        if (!checkRes.ok) break;
+        const checkRes = await fetch(`${PAPERCLIP_URL}/api/issues/${issue.identifier}`);        if (!checkRes.ok) break;
         const checked = await checkRes.json() as { status: string; identifier: string };
         if (checked.status === 'done') {
           const { exec } = require('child_process');

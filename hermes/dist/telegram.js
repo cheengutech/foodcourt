@@ -29,6 +29,40 @@ async function getRoomStats() {
 }
 async function handleIntent(text, chatId) {
     const lower = text.toLowerCase().trim();
+    if (lower.startsWith('ship:') || lower.startsWith('make:')) {
+        const task = text.replace(/^(ship|make):\s*/i, '').trim();
+        const createRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: task }),
+        });
+        if (!createRes.ok)
+            return sendMessage(chatId, `Could not create issue (${createRes.status}).`);
+        const issue = await createRes.json();
+        await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ assigneeId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
+        });
+        await sendMessage(chatId, `Got it. Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
+        for (let i = 0; i < 20; i++) {
+            await new Promise(r => setTimeout(r, 30000));
+            try {
+                const checkRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`);
+                if (!checkRes.ok)
+                    break;
+                const checked = await checkRes.json();
+                if (checked.status === 'done') {
+                    const { exec } = require('child_process');
+                    const log = await new Promise(resolve => exec('cd /Users/brian/foodcourt/foodcourt && git log --oneline -3', (_, stdout) => resolve(stdout)));
+                    await sendMessage(chatId, `✅ ${checked.identifier} done!\n\nLatest commits:\n${log}`);
+                    break;
+                }
+            }
+            catch { }
+        }
+        return;
+    }
     if (lower.includes('who') || lower.includes('room') || lower.includes('people') || lower.includes('how many')) {
         const sessions = await getRoomStats();
         if (!sessions)
@@ -70,7 +104,7 @@ async function handleIntent(text, chatId) {
         return res.ok ? sendMessage(chatId, `Done. "${word}" added to moderation rules.`) : sendMessage(chatId, 'Failed to add rule.');
     }
     if (lower === 'help' || lower === '?') {
-        return sendMessage(chatId, `*Hermes commands*\n\n• "who's in the room"\n• "write today's narration"\n• "what's the vibe"\n• "ban word: [word]"\n• "help"`);
+        return sendMessage(chatId, `*Hermes commands*\n\n• "who's in the room"\n• "write today's narration"\n• "what's the vibe"\n• "ban word: [word]"\n• "ship: [task]"\n• "fix: [task]"\n• "help"`);
     }
     if (lower.startsWith('fix:') || lower.startsWith('task:') || lower.startsWith('build:')) {
         const task = text.replace(/^(fix|task|build):\s*/i, '').trim();
@@ -94,41 +128,6 @@ async function handleIntent(text, chatId) {
         const cmd = text.replace(/^run:\s*/i, '').trim();
         const result = await (0, coder_1.runCommand)(cmd);
         return sendMessage(chatId, result);
-    }
-    if (lower.startsWith('ship:') || lower.startsWith('make:')) {
-        const task = text.replace(/^(ship|make):\s*/i, '').trim();
-        const createRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: task }),
-        });
-        if (!createRes.ok)
-            return sendMessage(chatId, `Could not create issue (${createRes.status}).`);
-        const issue = await createRes.json();
-        await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assigneeId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
-        });
-        await sendMessage(chatId, `Got it. Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
-        // Poll for completion every 30s for up to 10 minutes
-        for (let i = 0; i < 20; i++) {
-            await new Promise(r => setTimeout(r, 30000));
-            try {
-                const checkRes = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`);
-                if (!checkRes.ok)
-                    break;
-                const checked = await checkRes.json();
-                if (checked.status === 'done') {
-                    const { exec } = require('child_process');
-                    const log = await new Promise(resolve => exec('cd /Users/brian/foodcourt/foodcourt && git log --oneline -3', (_, stdout) => resolve(stdout)));
-                    await sendMessage(chatId, `✅ ${checked.identifier} done!\n\nLatest commits:\n${log}`);
-                    break;
-                }
-            }
-            catch { }
-        }
-        return;
     }
     const reply = await (0, ollama_1.ollamaChat)(`You are Hermes, operator assistant for a digital food court. The operator asks: "${text}". Reply helpfully and briefly.`);
     return sendMessage(chatId, reply);
