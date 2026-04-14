@@ -1,8 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pollTelegram = pollTelegram;
+const coder_1 = require("./coder");
 const ollama_1 = require("./ollama");
 const prompts_1 = require("./prompts");
+const processedIds = new Set();
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const ALLOWED_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -67,6 +69,29 @@ async function handleIntent(text, chatId) {
     if (lower === 'help' || lower === '?') {
         return sendMessage(chatId, `*Hermes commands*\n\n• "who's in the room"\n• "write today's narration"\n• "what's the vibe"\n• "ban word: [word]"\n• "help"`);
     }
+    if (lower.startsWith('fix:') || lower.startsWith('task:') || lower.startsWith('build:')) {
+        const task = text.replace(/^(fix|task|build):\s*/i, '').trim();
+        await sendMessage(chatId, `Starting task: "${task}"`);
+        const result = await (0, coder_1.runCodingTask)(task, (update) => sendMessage(chatId, update));
+        return sendMessage(chatId, result);
+    }
+    if (lower === 'revert' || lower === 'revert last') {
+        const result = await (0, coder_1.gitRevert)();
+        return sendMessage(chatId, result || 'Reverted last commit.');
+    }
+    if (lower === 'what changed' || lower === 'diff') {
+        const result = await (0, coder_1.gitDiff)();
+        return sendMessage(chatId, result || 'Nothing to show.');
+    }
+    if (lower === 'build' || lower === 'build status') {
+        const { ok, output } = await (0, coder_1.buildProject)();
+        return sendMessage(chatId, `Build ${ok ? 'passed' : 'failed'}:\n${output}`);
+    }
+    if (lower.startsWith('run:')) {
+        const cmd = text.replace(/^run:\s*/i, '').trim();
+        const result = await (0, coder_1.runCommand)(cmd);
+        return sendMessage(chatId, result);
+    }
     const reply = await (0, ollama_1.ollamaChat)(`You are Hermes, operator assistant for a digital food court. The operator asks: "${text}". Reply helpfully and briefly.`);
     return sendMessage(chatId, reply);
 }
@@ -78,6 +103,9 @@ async function pollTelegram() {
         const data = await res.json();
         for (const update of data.result) {
             lastUpdateId = update.update_id;
+            if (processedIds.has(update.update_id))
+                continue;
+            processedIds.add(update.update_id);
             const msg = update.message;
             if (!msg?.text)
                 continue;

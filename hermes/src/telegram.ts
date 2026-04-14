@@ -1,3 +1,4 @@
+import { runCodingTask, gitRevert, gitDiff, buildProject, runCommand } from './coder';
 import { ollamaChat } from './ollama';
 import { narratePrompt, NARRATE_SYSTEM, atmosphereState } from './prompts';
 const processedIds = new Set<number>();
@@ -78,6 +79,34 @@ async function handleIntent(text: string, chatId: string) {
     return sendMessage(chatId, `*Hermes commands*\n\n• "who's in the room"\n• "write today's narration"\n• "what's the vibe"\n• "ban word: [word]"\n• "help"`);
   }
 
+  if (lower.startsWith('fix:') || lower.startsWith('task:') || lower.startsWith('build:')) {
+    const task = text.replace(/^(fix|task|build):\s*/i, '').trim();
+    await sendMessage(chatId, `Starting task: "${task}"`);
+    const result = await runCodingTask(task, (update) => sendMessage(chatId, update));
+    return sendMessage(chatId, result);
+  }
+  
+  if (lower === 'revert' || lower === 'revert last') {
+    const result = await gitRevert();
+    return sendMessage(chatId, result || 'Reverted last commit.');
+  }
+  
+  if (lower === 'what changed' || lower === 'diff') {
+    const result = await gitDiff();
+    return sendMessage(chatId, result || 'Nothing to show.');
+  }
+  
+  if (lower === 'build' || lower === 'build status') {
+    const { ok, output } = await buildProject();
+    return sendMessage(chatId, `Build ${ok ? 'passed' : 'failed'}:\n${output}`);
+  }
+  
+  if (lower.startsWith('run:')) {
+    const cmd = text.replace(/^run:\s*/i, '').trim();
+    const result = await runCommand(cmd);
+    return sendMessage(chatId, result);
+  }
+  
   const reply = await ollamaChat(`You are Hermes, operator assistant for a digital food court. The operator asks: "${text}". Reply helpfully and briefly.`);
   return sendMessage(chatId, reply);
 }
