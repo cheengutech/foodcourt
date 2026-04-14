@@ -45,14 +45,13 @@ async function handleIntent(text: string, chatId: string) {
     await fetch(`${PAPERCLIP_URL}/api/issues/${issue.identifier}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assigneeId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
+      body: JSON.stringify({ assigneeAgentId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
     });
     await sendMessage(chatId, `Got it. Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
     for (let i = 0; i < 20; i++) {
       await new Promise(r => setTimeout(r, 30000));
       try {
-        const checkRes = await fetch(`${PAPERCLIP_URL}/api/issues/${issue.identifier}`);        if (!checkRes.ok) break;
-        const checked = await checkRes.json() as { status: string; identifier: string };
+        const checkRes = await fetch(`${PAPERCLIP_URL}/api/issues/${issue.identifier}`);        const checked = await checkRes.json() as { status: string; identifier: string };
         if (checked.status === 'done') {
           const { exec } = require('child_process');
           const log = await new Promise<string>(resolve =>
