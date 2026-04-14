@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback, useState } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 import { PresenceUser } from '@/lib/presence';
 import PixelAvatar from './PixelAvatar';
 import StatusBubble from './StatusBubble';
@@ -12,15 +12,19 @@ interface Props {
 }
 
 // Smaller tables — w/h as % of container width
-const TABLES = [
-  { id: 't1', x: 0.15, y: 0.30, w: 0.055, h: 0.032 },
-  { id: 't2', x: 0.38, y: 0.24, w: 0.055, h: 0.032 },
-  { id: 't3', x: 0.62, y: 0.30, w: 0.055, h: 0.032 },
-  { id: 't4', x: 0.80, y: 0.24, w: 0.055, h: 0.032 },
-  { id: 't5', x: 0.28, y: 0.62, w: 0.060, h: 0.035 },
-  { id: 't6', x: 0.58, y: 0.58, w: 0.060, h: 0.035 },
-  { id: 't7', x: 0.82, y: 0.60, w: 0.055, h: 0.032 },
-];
+// On mobile, tables will be slightly larger for easier interaction
+const getTables = (isMobile: boolean) => {
+  const scale = isMobile ? 1.3 : 1;
+  return [
+    { id: 't1', x: 0.15, y: 0.30, w: 0.055 * scale, h: 0.032 * scale },
+    { id: 't2', x: 0.38, y: 0.24, w: 0.055 * scale, h: 0.032 * scale },
+    { id: 't3', x: 0.62, y: 0.30, w: 0.055 * scale, h: 0.032 * scale },
+    { id: 't4', x: 0.80, y: 0.24, w: 0.055 * scale, h: 0.032 * scale },
+    { id: 't5', x: 0.28, y: 0.62, w: 0.060 * scale, h: 0.035 * scale },
+    { id: 't6', x: 0.58, y: 0.58, w: 0.060 * scale, h: 0.035 * scale },
+    { id: 't7', x: 0.82, y: 0.60, w: 0.055 * scale, h: 0.032 * scale },
+  ];
+};
 
 const CHAIR_OFFSETS = [
   { l: '5%',  t: '-55%' },
@@ -39,7 +43,16 @@ interface Ripple { id: number; px: number; py: number; }
 export default function RoomCanvas({ users, mySessionId, onMove }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ripples, setRipples] = useState<Ripple[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
   const rippleId = useRef(0);
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!onMove || !containerRef.current) return;
@@ -60,7 +73,7 @@ export default function RoomCanvas({ users, mySessionId, onMove }: Props) {
     <div
       ref={containerRef}
       className="relative w-full flex-1 overflow-hidden select-none"
-      style={{ background: '#0f0b08', minHeight: 340, cursor: 'crosshair' }}
+      style={{ background: '#0f0b08', minHeight: '340px', cursor: 'crosshair' }}
       onClick={handleClick}
     >
       {/* Ambient glows */}
@@ -91,7 +104,7 @@ export default function RoomCanvas({ users, mySessionId, onMove }: Props) {
       }} />
 
       {/* Tables */}
-      {TABLES.map(t => (
+      {getTables(isMobile).map(t => (
         <div key={t.id} className="absolute pointer-events-none" style={{
           left: `${t.x * 100}%`,
           top: `${t.y * 100}%`,
@@ -170,7 +183,7 @@ export default function RoomCanvas({ users, mySessionId, onMove }: Props) {
                   outlineOffset: 3,
                   borderRadius: 2,
                 }}>
-                  <PixelAvatar config={user.avatarConfig} pixelSize={8} isAway={user.isAway} />
+                  <PixelAvatar config={user.avatarConfig} pixelSize={isMobile ? 10 : 8} isAway={user.isAway} />
                 </div>
               </div>
             </div>
