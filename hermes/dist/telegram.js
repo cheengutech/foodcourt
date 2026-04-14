@@ -10,6 +10,9 @@ const ALLOWED_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const API_BASE = `https://api.telegram.org/bot${TOKEN}`;
+const PAPERCLIP_URL = 'http://127.0.0.1:3100';
+const PAPERCLIP_COMPANY = 'd4373f30-819f-4241-9f78-2d839fadbfc7';
+const PAPERCLIP_CTO_ID = 'cto-2';
 let lastUpdateId = 0;
 async function sendMessage(chatId, text) {
     await fetch(`${API_BASE}/sendMessage`, {
@@ -91,6 +94,17 @@ async function handleIntent(text, chatId) {
         const cmd = text.replace(/^run:\s*/i, '').trim();
         const result = await (0, coder_1.runCommand)(cmd);
         return sendMessage(chatId, result);
+    }
+    if (lower.startsWith('ship:') || lower.startsWith('make:') || lower.startsWith('task:') && lower.includes('cto')) {
+        const task = text.replace(/^(ship|make|task):\s*/i, '').trim();
+        const res = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: task, assigneeSlug: PAPERCLIP_CTO_ID, priority: 'medium' }),
+        });
+        if (res.ok)
+            return sendMessage(chatId, `Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
+        return sendMessage(chatId, `Could not create issue (${res.status}). Try again.`);
     }
     const reply = await (0, ollama_1.ollamaChat)(`You are Hermes, operator assistant for a digital food court. The operator asks: "${text}". Reply helpfully and briefly.`);
     return sendMessage(chatId, reply);

@@ -109,13 +109,13 @@ async function handleIntent(text: string, chatId: string) {
     const result = await runCommand(cmd);
     return sendMessage(chatId, result);
   }
-  if (lower.startsWith('ship:') || lower.startsWith('make:') || lower.startsWith('task:') && lower.includes('cto')) {
+  if (lower.startsWith('ship:') || lower.startsWith('make:')) {    
     const task = text.replace(/^(ship|make|task):\s*/i, '').trim();
     const res = await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: task, assigneeSlug: PAPERCLIP_CTO_ID, priority: 'medium' }),
-    });
+      body: JSON.stringify({ title: task, assigneeSlug: 'cto-2' }),
+        });
     if (res.ok) return sendMessage(chatId, `Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
     return sendMessage(chatId, `Could not create issue (${res.status}). Try again.`);
   }
