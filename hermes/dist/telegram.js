@@ -108,7 +108,7 @@ async function handleIntent(text, chatId) {
         await fetch(`${PAPERCLIP_URL}/api/companies/${PAPERCLIP_COMPANY}/issues/${issue.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assigneeSlug: 'cto-2' }),
+            body: JSON.stringify({ assigneeId: 'f56bfb7b-3b40-496b-b1d9-ccf379b34369' }),
         });
         return sendMessage(chatId, `Assigned to CTO: "${task}"\n\nI'll report back when it's done.`);
     }
